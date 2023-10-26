@@ -50,7 +50,7 @@ func init() {
 	rootCmd.AddCommand(tailCmd)
 }
 
-func tail(filename string, writer func(kvs map[string]string, in_fields, ex_fields []string) string) {
+func tail(filename string, writer func(kvs map[string]string) string, in_fields, ex_fields []string) {
 	logrus.Infof("tail %s", filename)
 	t, err := follower.New(filename, follower.Config{
 		Whence: io.SeekEnd,
