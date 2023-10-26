@@ -18,7 +18,7 @@ var remoteTailCmd = &cobra.Command{
 	Long:  ``,
 
 	RunE: func(cmd *cobra.Command, args []string) error {
-		filename, err := cmd.Flags().GetString("filename")
+		filenames, err := cmd.Flags().GetStringArray("filenames")
 		check(err)
 		format, err := cmd.Flags().GetString("format")
 		check(err)
@@ -44,18 +44,17 @@ var remoteTailCmd = &cobra.Command{
 			Address:    server,
 			Port:       "22",
 			User:       username,
-			Filename:   filename,
 			Key:        "/Users/eliofrancesconi/.ssh/id_rsa",
 			KnownHosts: "/Users/eliofrancesconi/.ssh/known_hosts",
 		}
 
-		rTail(opts, convert, includes, excludes)
+		rTail(filenames, opts, convert, includes, excludes)
 		return nil
 	},
 }
 
 func init() {
-	remoteTailCmd.PersistentFlags().String("filename", "/var/log/containers/nxw-sv__avo.log", "filename path")
+	remoteTailCmd.PersistentFlags().StringArray("filenames", []string{"AVO:/var/log/containers/nxw-sv__avo.log", "AVCFG:/var/log/containers/nxw-sv__av-cfg-fe.log"}, "filename path")
 	remoteTailCmd.PersistentFlags().String("format", "json", "format line json, string")
 	remoteTailCmd.PersistentFlags().StringSlice("excludes", []string{}, "fields to be excluded")
 	remoteTailCmd.PersistentFlags().StringSlice("includes", []string{}, "fields to be excluded")
@@ -65,15 +64,16 @@ func init() {
 	rootCmd.AddCommand(remoteTailCmd)
 }
 
-func rTail(opts rtail.Options, writer func(kvs map[string]string) string, in_fields, ex_fields []string) {
-	logrus.Infof("tail %s", opts.Filename)
+func rTail(filenames []string, opts rtail.Options, writer func(kvs map[string]string) string, in_fields, ex_fields []string) {
+	logrus.Infof("tail %s", filenames)
 	ctx := context.Background()
-	lines := make(chan string)
-	go func() {
-		err := rtail.Tail(ctx, opts, lines)
-		check(err)
-	}()
-
+	lines := make(chan string, 4)
+	for _, filename := range filenames {
+		go func(f string) {
+			err := rtail.Tail(ctx, f, opts, lines)
+			check(err)
+		}(filename)
+	}
 	for {
 		select {
 		case line := <-lines:

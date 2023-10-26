@@ -7,16 +7,28 @@ import (
 	"io"
 	"log"
 	"os"
+	"strings"
 	"sync"
+
+	fp "path/filepath"
 
 	"github.com/sirupsen/logrus"
 	"golang.org/x/crypto/ssh"
 	kh "golang.org/x/crypto/ssh/knownhosts"
 )
 
-func tailFile(ctx context.Context, session *ssh.Session, file string, linec chan<- string) error {
-
-	command := fmt.Sprintf("tail -F %s", file)
+func tailFile(ctx context.Context, session *ssh.Session, idAndFilePath string, linec chan<- string) error {
+	var filepath string
+	var filename string
+	if strings.Index(idAndFilePath, ":") <= 0 {
+		filepath = idAndFilePath
+		filename = fp.Base(filepath)
+	} else {
+		pos := strings.Index(idAndFilePath, ":")
+		filename = idAndFilePath[:pos]
+		filepath = idAndFilePath[pos+1:]
+	}
+	command := fmt.Sprintf("tail -F %s", filepath)
 
 	var wg sync.WaitGroup
 	errc := make(chan error, 3)
@@ -28,7 +40,7 @@ func tailFile(ctx context.Context, session *ssh.Session, file string, linec chan
 		scan.Split(bufio.ScanLines)
 		for scan.Scan() {
 			logrus.Tracef("Sending line to channel %s\n", scan.Text())
-			linec <- scan.Text()
+			linec <- "file=" + filename + " " + scan.Text()
 		}
 		if err := scan.Err(); err != nil {
 			errc <- err
@@ -78,8 +90,6 @@ func tailFile(ctx context.Context, session *ssh.Session, file string, linec chan
 }
 
 type Options struct {
-	// The name of the file to tail
-	Filename string
 	// username to use when connecting to the remote host
 	User string
 	// address of the remote host
@@ -93,7 +103,7 @@ type Options struct {
 }
 
 // Tail tails the file and sends the lines to the lines channel
-func Tail(ctx context.Context, opts Options, lines chan string) error {
+func Tail(ctx context.Context, filename string, opts Options, lines chan string) error {
 	// Read the private key file.
 	key, err := os.ReadFile(opts.Key)
 	if err != nil {
@@ -131,7 +141,7 @@ func Tail(ctx context.Context, opts Options, lines chan string) error {
 	}
 	defer ss.Close()
 
-	err = tailFile(ctx, ss, opts.Filename, lines)
+	err = tailFile(ctx, ss, filename, lines)
 	if err != nil {
 		log.Fatal("unable to tail file: ", err)
 		return err

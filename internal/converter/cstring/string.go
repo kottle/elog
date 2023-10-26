@@ -4,6 +4,9 @@ import "easylog/internal/color"
 
 func Convert(kvs map[string]string) string {
 	result := ""
+	if file, ok := kvs["file"]; ok {
+		result += color.Red(file) + " "
+	}
 	if time, ok := kvs["time"]; ok {
 		result += color.Yellow(time) + " "
 	}
@@ -14,7 +17,7 @@ func Convert(kvs map[string]string) string {
 		result += color.Red(msg) + " "
 	}
 	for k, v := range kvs {
-		if k != "time" && k != "level" && k != "msg" {
+		if k != "time" && k != "level" && k != "msg" && k != "file" {
 			result += k + "=" + v + " "
 		}
 	}
