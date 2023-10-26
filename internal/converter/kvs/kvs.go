@@ -9,6 +9,7 @@ import (
 func ToKVS(line string, in_fields, ex_fields []string) map[string]string {
 	//parse line to json
 	line = strings.ReplaceAll(line, "\\\"", "'")
+	line = strings.ReplaceAll(line, "\\\\'", "'")
 	kvs := make(map[string]string)
 	remaining := line
 	for {

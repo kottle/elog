@@ -25,7 +25,7 @@
             "args": [
                 "remote-tail", 
                 "--format", "json",
-                "--filename","/var/log/containers/nxw-sv__avo.log",
+                "--filename","/var/log/containers/nxw-sv__av-cfg-fe.log",
                 "--includes", "time,msg"
             ],
             "program": "${workspaceFolder}/cmd/elog"

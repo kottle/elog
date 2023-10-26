@@ -26,6 +26,10 @@ var remoteTailCmd = &cobra.Command{
 		check(err)
 		excludes, err := cmd.Flags().GetStringSlice("excludes")
 		check(err)
+		server, err := cmd.Flags().GetString("server")
+		check(err)
+		username, err := cmd.Flags().GetString("username")
+		check(err)
 
 		var convert func(map[string]string) string
 		switch format {
@@ -36,7 +40,16 @@ var remoteTailCmd = &cobra.Command{
 		default:
 			return fmt.Errorf("format %s not supported", format)
 		}
-		rTail(filename, convert, includes, excludes)
+		opts := rtail.Options{
+			Address:    server,
+			Port:       "22",
+			User:       username,
+			Filename:   filename,
+			Key:        "/Users/eliofrancesconi/.ssh/id_rsa",
+			KnownHosts: "/Users/eliofrancesconi/.ssh/known_hosts",
+		}
+
+		rTail(opts, convert, includes, excludes)
 		return nil
 	},
 }
@@ -46,21 +59,15 @@ func init() {
 	remoteTailCmd.PersistentFlags().String("format", "json", "format line json, string")
 	remoteTailCmd.PersistentFlags().StringSlice("excludes", []string{}, "fields to be excluded")
 	remoteTailCmd.PersistentFlags().StringSlice("includes", []string{}, "fields to be excluded")
+	remoteTailCmd.PersistentFlags().String("server", "192.168.32.9", "server address")
+	remoteTailCmd.PersistentFlags().String("username", "root", "username to connect to server")
 
 	rootCmd.AddCommand(remoteTailCmd)
 }
 
-func rTail(filename string, writer func(kvs map[string]string) string, in_fields, ex_fields []string) {
-	logrus.Infof("tail %s", filename)
+func rTail(opts rtail.Options, writer func(kvs map[string]string) string, in_fields, ex_fields []string) {
+	logrus.Infof("tail %s", opts.Filename)
 	ctx := context.Background()
-	opts := rtail.Options{
-		Address:    "10.0.4.38",
-		Port:       "22",
-		User:       "root",
-		Filename:   filename,
-		Key:        "/Users/eliofrancesconi/.ssh/id_rsa",
-		KnownHosts: "/Users/eliofrancesconi/.ssh/known_hosts",
-	}
 	lines := make(chan string)
 	go func() {
 		err := rtail.Tail(ctx, opts, lines)
