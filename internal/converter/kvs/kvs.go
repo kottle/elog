@@ -2,11 +2,9 @@ package kvs
 
 import (
 	"strings"
-
-	"golang.org/x/exp/slices"
 )
 
-func ToKVS(line string, in_fields, ex_fields []string) map[string]string {
+func ToKVS(line string, filter func(k, v string) bool) map[string]string {
 	//parse line to json
 	line = strings.ReplaceAll(line, "\\\"", "'")
 	line = strings.ReplaceAll(line, "\\\\'", "'")
@@ -44,20 +42,10 @@ func ToKVS(line string, in_fields, ex_fields []string) map[string]string {
 					remaining = remaining[pos+1:]
 				}
 			}
-			if len(in_fields) > 0 {
-				if !slices.Contains(in_fields, key) {
-					continue
-				}
-				kvs[key] = value
-			} else if len(ex_fields) > 0 {
-				if slices.Contains(ex_fields, key) {
-					continue
-				}
-				kvs[key] = value
-			} else {
-				kvs[key] = value
+			if filter != nil && !filter(key, value) {
+				continue
 			}
-
+			kvs[key] = value
 		} else {
 			//end line
 			break

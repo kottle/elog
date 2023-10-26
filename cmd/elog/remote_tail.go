@@ -5,6 +5,7 @@ import (
 	"easylog/internal/converter/cstring"
 	"easylog/internal/converter/json"
 	"easylog/internal/converter/kvs"
+	"easylog/internal/filter"
 	"easylog/internal/rtail"
 	"fmt"
 
@@ -30,7 +31,8 @@ var remoteTailCmd = &cobra.Command{
 		check(err)
 		username, err := cmd.Flags().GetString("username")
 		check(err)
-
+		filterpath, err := cmd.Flags().GetString("filterpath")
+		check(err)
 		var convert func(map[string]string) string
 		switch format {
 		case "json":
@@ -40,6 +42,10 @@ var remoteTailCmd = &cobra.Command{
 		default:
 			return fmt.Errorf("format %s not supported", format)
 		}
+		var filterfunc func(k, v string) bool
+		if filterpath != "" {
+			filterfunc = filter.Init(filterpath)
+		}
 		opts := rtail.Options{
 			Address:    server,
 			Port:       "22",
@@ -48,7 +54,7 @@ var remoteTailCmd = &cobra.Command{
 			KnownHosts: "/Users/eliofrancesconi/.ssh/known_hosts",
 		}
 
-		rTail(filenames, opts, convert, includes, excludes)
+		rTail(filenames, opts, convert, filterfunc)
 		return nil
 	},
 }
@@ -56,15 +62,13 @@ var remoteTailCmd = &cobra.Command{
 func init() {
 	remoteTailCmd.PersistentFlags().StringArray("filenames", []string{"AVO:/var/log/containers/nxw-sv__avo.log", "AVCFG:/var/log/containers/nxw-sv__av-cfg-fe.log"}, "filename path")
 	remoteTailCmd.PersistentFlags().String("format", "json", "format line json, string")
-	remoteTailCmd.PersistentFlags().StringSlice("excludes", []string{}, "fields to be excluded")
-	remoteTailCmd.PersistentFlags().StringSlice("includes", []string{}, "fields to be excluded")
 	remoteTailCmd.PersistentFlags().String("server", "192.168.32.9", "server address")
 	remoteTailCmd.PersistentFlags().String("username", "root", "username to connect to server")
-
+	remoteTailCmd.PersistentFlags().String("filterpath", "", "filter file path")
 	rootCmd.AddCommand(remoteTailCmd)
 }
 
-func rTail(filenames []string, opts rtail.Options, writer func(kvs map[string]string) string, in_fields, ex_fields []string) {
+func rTail(filenames []string, opts rtail.Options, writer func(kvs map[string]string) string, filter func(k, v string) bool) {
 	logrus.Infof("tail %s", filenames)
 	ctx := context.Background()
 	lines := make(chan string, 4)
@@ -77,7 +81,7 @@ func rTail(filenames []string, opts rtail.Options, writer func(kvs map[string]st
 	for {
 		select {
 		case line := <-lines:
-			fmt.Println(writer(kvs.ToKVS(line, in_fields, ex_fields)))
+			fmt.Println(writer(kvs.ToKVS(line, filter)))
 		}
 	}
 }
