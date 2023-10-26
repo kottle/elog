@@ -34,6 +34,6 @@ func main1() int {
 }
 
 func main() {
-	logrus.SetLevel(logrus.TraceLevel)
+	logrus.SetLevel(logrus.ErrorLevel)
 	os.Exit(main1())
 }

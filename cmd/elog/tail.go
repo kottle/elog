@@ -22,6 +22,11 @@ var tailCmd = &cobra.Command{
 		check(err)
 		format, err := cmd.Flags().GetString("format")
 		check(err)
+		includes, err := cmd.Flags().GetStringSlice("includes")
+		check(err)
+		excludes, err := cmd.Flags().GetStringSlice("excludes")
+		check(err)
+
 		var convert func(map[string]string) string
 		switch format {
 		case "json":
@@ -31,7 +36,7 @@ var tailCmd = &cobra.Command{
 		default:
 			return fmt.Errorf("format %s not supported", format)
 		}
-		tail(filename, convert)
+		tail(filename, convert, includes, excludes)
 		return nil
 	},
 }
@@ -39,11 +44,13 @@ var tailCmd = &cobra.Command{
 func init() {
 	tailCmd.PersistentFlags().String("filename", "/var/log/containers/nxw-sv__avo.log", "filename path")
 	tailCmd.PersistentFlags().String("format", "json", "format line json, string")
+	tailCmd.PersistentFlags().StringSlice("excludes", []string{}, "fields to be excluded")
+	tailCmd.PersistentFlags().StringSlice("includes", []string{}, "fields to be excluded")
 
 	rootCmd.AddCommand(tailCmd)
 }
 
-func tail(filename string, writer func(kvs map[string]string) string) {
+func tail(filename string, writer func(kvs map[string]string, in_fields, ex_fields []string) string) {
 	logrus.Infof("tail %s", filename)
 	t, err := follower.New(filename, follower.Config{
 		Whence: io.SeekEnd,
@@ -54,7 +61,7 @@ func tail(filename string, writer func(kvs map[string]string) string) {
 	check(err)
 
 	for line := range t.Lines() {
-		fmt.Println(writer(kvs.ToKVS(line.String())))
+		fmt.Println(writer(kvs.ToKVS(line.String(), in_fields, ex_fields)))
 	}
 	logrus.Infof("tail %s done", filename)
 }
