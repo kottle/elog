@@ -1,0 +1,11 @@
+field:
+  includes:
+    - msg
+    - level
+    - time
+  excludes:
+field_value:
+  includes:
+    class: Arylic
+    level: debug
+  excludes:

@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"easylog/internal/common"
 	"easylog/internal/converter/cstring"
 	"easylog/internal/converter/json"
 	"easylog/internal/converter/kvs"
@@ -23,17 +24,13 @@ var remoteTailCmd = &cobra.Command{
 		check(err)
 		format, err := cmd.Flags().GetString("format")
 		check(err)
-		includes, err := cmd.Flags().GetStringSlice("includes")
-		check(err)
-		excludes, err := cmd.Flags().GetStringSlice("excludes")
-		check(err)
 		server, err := cmd.Flags().GetString("server")
 		check(err)
 		username, err := cmd.Flags().GetString("username")
 		check(err)
 		filterpath, err := cmd.Flags().GetString("filterpath")
 		check(err)
-		var convert func(map[string]string) string
+		var convert func(common.KVS) string
 		switch format {
 		case "json":
 			convert = json.Convert
@@ -42,9 +39,10 @@ var remoteTailCmd = &cobra.Command{
 		default:
 			return fmt.Errorf("format %s not supported", format)
 		}
-		var filterfunc func(k, v string) bool
+		var f *filter.Filter
 		if filterpath != "" {
-			filterfunc = filter.Init(filterpath)
+			f, err = filter.New(filterpath)
+			check(err)
 		}
 		opts := rtail.Options{
 			Address:    server,
@@ -54,7 +52,7 @@ var remoteTailCmd = &cobra.Command{
 			KnownHosts: "/Users/eliofrancesconi/.ssh/known_hosts",
 		}
 
-		rTail(filenames, opts, convert, filterfunc)
+		rTail(filenames, opts, convert, f)
 		return nil
 	},
 }
@@ -68,7 +66,7 @@ func init() {
 	rootCmd.AddCommand(remoteTailCmd)
 }
 
-func rTail(filenames []string, opts rtail.Options, writer func(kvs map[string]string) string, filter func(k, v string) bool) {
+func rTail(filenames []string, opts rtail.Options, writer func(kvs common.KVS) string, filter *filter.Filter) {
 	logrus.Infof("tail %s", filenames)
 	ctx := context.Background()
 	lines := make(chan string, 4)
@@ -81,7 +79,11 @@ func rTail(filenames []string, opts rtail.Options, writer func(kvs map[string]st
 	for {
 		select {
 		case line := <-lines:
-			fmt.Println(writer(kvs.ToKVS(line, filter)))
+			kvs := kvs.ToKVS(line, filter)
+			if len(kvs) == 0 {
+				continue
+			}
+			fmt.Println(writer(kvs))
 		}
 	}
 }

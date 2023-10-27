@@ -1,6 +1,7 @@
 package main
 
 import (
+	"easylog/internal/common"
 	"easylog/internal/converter/cstring"
 	"easylog/internal/converter/json"
 	"easylog/internal/converter/kvs"
@@ -27,7 +28,7 @@ var tailCmd = &cobra.Command{
 		excludes, err := cmd.Flags().GetStringSlice("excludes")
 		check(err)
 
-		var convert func(map[string]string) string
+		var convert func(common.KVS) string
 		switch format {
 		case "json":
 			convert = json.Convert
@@ -50,7 +51,7 @@ func init() {
 	rootCmd.AddCommand(tailCmd)
 }
 
-func tail(filename string, writer func(kvs map[string]string) string, in_fields, ex_fields []string) {
+func tail(filename string, writer func(kvs common.KVS) string, in_fields, ex_fields []string) {
 	logrus.Infof("tail %s", filename)
 	t, err := follower.New(filename, follower.Config{
 		Whence: io.SeekEnd,
@@ -61,7 +62,7 @@ func tail(filename string, writer func(kvs map[string]string) string, in_fields,
 	check(err)
 
 	for line := range t.Lines() {
-		fmt.Println(writer(kvs.ToKVS(line.String(), in_fields, ex_fields)))
+		fmt.Println(writer(kvs.ToKVS(line.String(), nil)))
 	}
 	logrus.Infof("tail %s done", filename)
 }

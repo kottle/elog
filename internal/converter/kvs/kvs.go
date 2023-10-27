@@ -1,14 +1,16 @@
 package kvs
 
 import (
+	"easylog/internal/common"
+	"easylog/internal/filter"
 	"strings"
 )
 
-func ToKVS(line string, filter func(k, v string) bool) map[string]string {
+func ToKVS(line string, filter *filter.Filter) common.KVS {
 	//parse line to json
 	line = strings.ReplaceAll(line, "\\\"", "'")
 	line = strings.ReplaceAll(line, "\\\\'", "'")
-	kvs := make(map[string]string)
+	kvs := make(common.KVS)
 	remaining := line
 	for {
 		var key string
@@ -42,7 +44,7 @@ func ToKVS(line string, filter func(k, v string) bool) map[string]string {
 					remaining = remaining[pos+1:]
 				}
 			}
-			if filter != nil && !filter(key, value) {
+			if filter != nil && filter.SkipField(key) {
 				continue
 			}
 			kvs[key] = value

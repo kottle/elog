@@ -1,8 +1,11 @@
 package cstring
 
-import "easylog/internal/color"
+import (
+	"easylog/internal/color"
+	"easylog/internal/common"
+)
 
-func Convert(kvs map[string]string) string {
+func Convert(kvs common.KVS) string {
 	result := ""
 	if file, ok := kvs["file"]; ok {
 		result += color.Red(file) + " "

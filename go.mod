@@ -7,7 +7,7 @@ require (
 	github.com/sirupsen/logrus v1.9.3
 	github.com/spf13/cobra v1.7.0
 	golang.org/x/crypto v0.14.0
-	golang.org/x/exp v0.0.0-20231006140011-7918f672742d
+	gopkg.in/yaml.v2 v2.4.0
 )
 
 require (

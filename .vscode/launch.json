@@ -25,9 +25,10 @@
             "args": [
                 "remote-tail", 
                 "--format", "json",
-                "--includes", "time,msg,file"
+                "--filterpath","./filter/filter.yaml",
             ],
-            "program": "${workspaceFolder}/cmd/elog"
+            "program": "${workspaceFolder}/cmd/elog",
+            "cwd": "${workspaceFolder}"
         }
     ]
 }
