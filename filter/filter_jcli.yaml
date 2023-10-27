@@ -1,13 +1,20 @@
 field:
   if:
-    - msg
     - time
-  notIf:
+    - msg
+    - "@time"
+    - "@message"
+    - body
+    - user
 line:
   notIf:
-  if:
   notMatch:
+  if:
+    user: 
+      - f.salvestrini@nextworks.it
   match:
     user:
       - ".*panicucci.*"
+    "@message":
+      - ".*summary.*"
 

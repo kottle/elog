@@ -20,6 +20,7 @@ type ConditionMap struct {
 	If       map[string][]string `yaml:"if"`
 	NotIf    map[string][]string `yaml:"notIf"`
 	NotMatch map[string][]string `yaml:"notMatch"`
+	Match    map[string][]string `yaml:"match"`
 }
 
 type Data struct {
@@ -107,10 +108,8 @@ func (f *Filter) SkipField(k string) bool {
 	filterData := f.filterData
 	if len(filterData.Field.If) > 0 {
 		skipField = true
-		for _, include := range filterData.Field.If {
-			if include == k {
-				skipField = false
-			}
+		if slices.Contains(filterData.Field.If, k) {
+			skipField = false
 		}
 	}
 	if len(filterData.Field.NotIf) > 0 {
@@ -129,9 +128,12 @@ func (f *Filter) SkipField(k string) bool {
 func (f *Filter) SkipLine(kvs common.KVS) bool {
 	f.lock.RLock()
 	defer f.lock.RUnlock()
+
+	logrus.Debugf("====================")
 	filterData := f.filterData
 
-	if len(filterData.Line.NotIf) > 0 {
+	if len(filterData.Line.NotIf) > 0 || len(filterData.Line.NotMatch) > 0 {
+		logrus.Debugf(" notIF")
 		skipLine := false
 		for k, v := range filterData.Line.NotIf {
 			if slices.Contains(v, kvs[k]) {
@@ -143,26 +145,45 @@ func (f *Filter) SkipLine(kvs common.KVS) bool {
 		for k, regexs := range filterData.Line.NotMatch {
 			for _, regex := range regexs {
 				if kvs[k] != "" {
+					logrus.Debugf("Skip line: with %s:%s", k, regex)
 					matched, _ := regexp.MatchString(regex, kvs[k])
 					if matched {
-						logrus.Debugf("Skip line: with %s:%s", k, regex)
 						skipLine = true
 						break
 					}
 				}
 			}
 		}
-		return skipLine
+		if skipLine {
+			return true
+		}
 	}
 
-	if len(filterData.Line.If) > 0 {
+	if len(filterData.Line.If) > 0 || len(filterData.Line.Match) > 0 {
+		logrus.Debugf(" IF")
+		skipLine := true
 		for k, v := range filterData.Line.If {
-			if !slices.Contains(v, kvs[k]) {
+			logrus.Debugf(" IF %s contains %s", kvs[k], v)
+			if slices.Contains(v, kvs[k]) {
 				logrus.Debugf("Not skip line: with %s:%s", k, v)
-				return true
+				skipLine = false
 			}
 		}
-		return false
+
+		for k, regexs := range filterData.Line.Match {
+			for _, regex := range regexs {
+				if kvs[k] != "" {
+					logrus.Debugf("Skip line: with %s:%s - %s", k, regex, kvs[k])
+					matched, _ := regexp.MatchString(regex, kvs[k])
+					if matched {
+						skipLine = false
+						break
+					}
+				}
+			}
+		}
+
+		return skipLine
 	}
 	return false
 }
