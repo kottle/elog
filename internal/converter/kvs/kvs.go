@@ -53,5 +53,8 @@ func ToKVS(line string, filter *filter.Filter) common.KVS {
 			break
 		}
 	}
+	if filter != nil && filter.SkipLine(kvs) {
+		return common.KVS{}
+	}
 	return kvs
 }

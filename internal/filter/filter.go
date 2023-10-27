@@ -5,20 +5,22 @@ import (
 	"os"
 	"sync"
 
+	"github.com/sirupsen/logrus"
 	"gopkg.in/yaml.v2"
 )
 
-type Field struct {
-	Includes []string `yaml:"includes"`
-	Excludes []string `yaml:"excludes"`
+type ConditionArr struct {
+	If    []string `yaml:"if"`
+	NotIf []string `yaml:"notIf"`
 }
-type FieldValue struct {
-	Includes common.KVS `yaml:"includes"`
-	Excludes common.KVS `yaml:"excludes"`
+type ConditionMap struct {
+	If    map[string]string `yaml:"if"`
+	NotIf map[string]string `yaml:"notIf"`
 }
+
 type Data struct {
-	Field      Field      `yaml:"field"`
-	FieldValue FieldValue `yaml:"field_value"`
+	Field ConditionArr `yaml:"field"`
+	Line  ConditionMap `yaml:"line"`
 }
 
 func New(filepath string) (*Filter, error) {
@@ -56,17 +58,17 @@ func (f *Filter) SkipField(k string) bool {
 	defer f.lock.RUnlock()
 	var skipField bool
 	filterData := f.filterData
-	if len(filterData.Field.Includes) > 0 {
+	if len(filterData.Field.If) > 0 {
 		skipField = true
-		for _, include := range filterData.Field.Includes {
+		for _, include := range filterData.Field.If {
 			if include == k {
 				skipField = false
 			}
 		}
 	}
-	if len(filterData.Field.Excludes) > 0 {
+	if len(filterData.Field.NotIf) > 0 {
 		skipField = false
-		for _, exclude := range filterData.Field.Excludes {
+		for _, exclude := range filterData.Field.NotIf {
 			if exclude == k {
 				skipField = true
 			}
@@ -78,5 +80,28 @@ func (f *Filter) SkipField(k string) bool {
 // SkipLine filters the key value pairs
 // retuns true if the line should be skipped
 func (f *Filter) SkipLine(kvs common.KVS) bool {
+	f.lock.RLock()
+	defer f.lock.RUnlock()
+	filterData := f.filterData
+
+	if len(filterData.Line.NotIf) > 0 {
+		for k, v := range filterData.Line.NotIf {
+			if kvs[k] == v {
+				logrus.Debugf("Skip line: with %s:%s", k, v)
+				return true
+			}
+		}
+		return false
+	}
+
+	if len(filterData.Line.If) > 0 {
+		for k, v := range filterData.Line.If {
+			if kvs[k] != v {
+				logrus.Debugf("Not skip line: with %s:%s", k, v)
+				return true
+			}
+		}
+		return false
+	}
 	return false
 }

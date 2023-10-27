@@ -1,11 +1,13 @@
 field:
-  includes:
+  if:
     - msg
     - level
+    - class
     - time
-  excludes:
-field_value:
-  includes:
-    class: Arylic
-    level: debug
-  excludes:
+  notIf:
+line:
+  notIf:
+#    class: Arylic
+#    level: debug
+  if:
+    class: Engine

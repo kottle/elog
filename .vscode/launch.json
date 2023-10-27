@@ -24,7 +24,7 @@
             "mode": "auto",
             "args": [
                 "remote-tail", 
-                "--format", "json",
+                "--format", "string",
                 "--filterpath","./filter/filter.yaml",
             ],
             "program": "${workspaceFolder}/cmd/elog",
