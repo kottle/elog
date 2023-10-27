@@ -1,0 +1,13 @@
+field:
+  if:
+    - msg
+    - time
+  notIf:
+line:
+  notIf:
+  if:
+  notMatch:
+  match:
+    user:
+      - ".*panicucci.*"
+

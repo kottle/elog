@@ -13,14 +13,23 @@ func Convert(kvs common.KVS) string {
 	if time, ok := kvs["time"]; ok {
 		result += color.Yellow(time) + " "
 	}
+	if msg, ok := kvs["@time"]; ok {
+		result += color.Yellow(msg) + " "
+	}
 	if level, ok := kvs["level"]; ok {
+		result += color.Yellow(level) + " "
+	}
+	if level, ok := kvs["@level"]; ok {
 		result += color.Yellow(level) + " "
 	}
 	if msg, ok := kvs["msg"]; ok {
 		result += color.Red(msg) + " "
 	}
+	if msg, ok := kvs["@message"]; ok {
+		result += color.Red(msg) + " "
+	}
 	for k, v := range kvs {
-		if k != "time" && k != "level" && k != "msg" && k != "file" {
+		if k != "time" && k != "level" && k != "msg" && k != "file" && k != "@message" && k != "@time" && k != "@level" {
 			result += k + "=" + v + " "
 		}
 	}

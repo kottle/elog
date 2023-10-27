@@ -23,6 +23,9 @@ var fileCmd = &cobra.Command{
 		check(err)
 		format, err := cmd.Flags().GetString("format")
 		check(err)
+		filterpath, err := cmd.Flags().GetString("filterpath")
+		check(err)
+
 		var convert func(common.KVS) string
 		switch format {
 		case "json":
@@ -32,8 +35,18 @@ var fileCmd = &cobra.Command{
 		default:
 			return fmt.Errorf("format %s not supported", format)
 		}
-
-		readFile(filename, convert, nil)
+		var f *filter.Filter
+		if filterpath != "" {
+			f, err = filter.New(filterpath)
+			check(err)
+		}
+		defer func() {
+			if f != nil {
+				err := f.Close()
+				check(err)
+			}
+		}()
+		readFile(filename, convert, f)
 		return nil
 	},
 }
@@ -41,6 +54,7 @@ var fileCmd = &cobra.Command{
 func init() {
 	fileCmd.PersistentFlags().String("filename", "/var/log/containers/nxw-sv__avo.log", "filename path")
 	fileCmd.PersistentFlags().String("format", "json", "format line json, string")
+	fileCmd.PersistentFlags().String("filterpath", "", "filter file path")
 
 	rootCmd.AddCommand(fileCmd)
 }
@@ -54,7 +68,10 @@ func readFile(filename string, writer func(common.KVS) string, filter *filter.Fi
 
 	scanner := bufio.NewScanner(f)
 	for scanner.Scan() {
-		fmt.Println(writer(kvs.ToKVS(scanner.Text(), filter)))
+		kvs := kvs.ToKVS(scanner.Text(), filter)
+		if len(kvs) > 0 {
+			fmt.Println(writer(kvs))
+		}
 	}
 
 	return "", nil
