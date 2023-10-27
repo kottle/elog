@@ -44,6 +44,13 @@ var remoteTailCmd = &cobra.Command{
 			f, err = filter.New(filterpath)
 			check(err)
 		}
+		defer func() {
+			if f != nil {
+				err := f.Close()
+				check(err)
+			}
+		}()
+
 		opts := rtail.Options{
 			Address:    server,
 			Port:       "22",

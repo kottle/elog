@@ -3,9 +3,12 @@ package filter
 import (
 	"easylog/internal/common"
 	"os"
+	"regexp"
 	"sync"
 
+	"github.com/fsnotify/fsnotify"
 	"github.com/sirupsen/logrus"
+	"golang.org/x/exp/slices"
 	"gopkg.in/yaml.v2"
 )
 
@@ -14,8 +17,9 @@ type ConditionArr struct {
 	NotIf []string `yaml:"notIf"`
 }
 type ConditionMap struct {
-	If    map[string]string `yaml:"if"`
-	NotIf map[string]string `yaml:"notIf"`
+	If       map[string][]string `yaml:"if"`
+	NotIf    map[string][]string `yaml:"notIf"`
+	NotMatch map[string][]string `yaml:"notMatch"`
 }
 
 type Data struct {
@@ -35,9 +39,49 @@ type Filter struct {
 	filepath   string
 	lock       sync.RWMutex
 	filterData Data
+	watcher    *fsnotify.Watcher
 }
 
 func (f *Filter) init() error {
+	err := f.updateFile()
+	if err != nil {
+		return err
+	}
+	f.watcher, err = fsnotify.NewWatcher()
+	if err != nil {
+		return err
+	}
+	err = f.watcher.Add(f.filepath)
+	if err != nil {
+		return err
+	}
+	go func() {
+		for {
+			select {
+			case event, ok := <-f.watcher.Events:
+				if !ok {
+					return
+				}
+				if event.Op&fsnotify.Write == fsnotify.Write {
+					logrus.Debugf("modified file: %s", event.Name)
+					err := f.updateFile()
+					if err != nil {
+						logrus.Error(err)
+					}
+				}
+			case err, ok := <-f.watcher.Errors:
+				if !ok {
+					return
+				}
+				logrus.Error(err)
+			}
+		}
+	}()
+
+	return nil
+}
+
+func (f *Filter) updateFile() error {
 	yfile, err := os.ReadFile(f.filepath)
 	if err != nil {
 		return err
@@ -49,6 +93,9 @@ func (f *Filter) init() error {
 		return err
 	}
 	return nil
+}
+func (f *Filter) Close() error {
+	return f.watcher.Close()
 }
 
 // SkipField filters the key value pairs
@@ -85,18 +132,32 @@ func (f *Filter) SkipLine(kvs common.KVS) bool {
 	filterData := f.filterData
 
 	if len(filterData.Line.NotIf) > 0 {
+		skipLine := false
 		for k, v := range filterData.Line.NotIf {
-			if kvs[k] == v {
+			if slices.Contains(v, kvs[k]) {
 				logrus.Debugf("Skip line: with %s:%s", k, v)
-				return true
+				skipLine = true
+				break
 			}
 		}
-		return false
+		for k, regexs := range filterData.Line.NotMatch {
+			for _, regex := range regexs {
+				if kvs[k] != "" {
+					matched, _ := regexp.MatchString(regex, kvs[k])
+					if matched {
+						logrus.Debugf("Skip line: with %s:%s", k, regex)
+						skipLine = true
+						break
+					}
+				}
+			}
+		}
+		return skipLine
 	}
 
 	if len(filterData.Line.If) > 0 {
 		for k, v := range filterData.Line.If {
-			if kvs[k] != v {
+			if !slices.Contains(v, kvs[k]) {
 				logrus.Debugf("Not skip line: with %s:%s", k, v)
 				return true
 			}

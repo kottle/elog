@@ -2,12 +2,33 @@ field:
   if:
     - msg
     - level
+    - file
     - class
     - time
   notIf:
 line:
   notIf:
-#    class: Arylic
+    file:
+      - AVCFG
+    class: 
+      - Queue
+      - ConnectionService
+      - ArylicClient
+      - ArylicDriver
+      - Arylic
+      - uPNPClient
+      - BroadcastChannel
+      - AVTransport
+      - protocolserver
+      - GADBClient
+      - ATV2.Queue
 #    level: debug
   if:
-    class: Engine
+    class:
+      - Arylic
+      - Engine
+  notMatch:
+    msg:
+      - ".*Driver.*onnected.*" 
+      - ".* UPnP client.*"
+
