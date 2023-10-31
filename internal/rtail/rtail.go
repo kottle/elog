@@ -40,7 +40,7 @@ func tailFile(ctx context.Context, session *ssh.Session, idAndFilePath string, l
 		scan.Split(bufio.ScanLines)
 		for scan.Scan() {
 			logrus.Tracef("Sending line to channel %s\n", scan.Text())
-			linec <- "file=" + filename + " " + scan.Text()
+			linec <- "@TAG=" + filename + " " + scan.Text()
 		}
 		if err := scan.Err(); err != nil {
 			errc <- err

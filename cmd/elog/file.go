@@ -2,11 +2,11 @@ package main
 
 import (
 	"bufio"
-	"easylog/internal/common"
-	"easylog/internal/converter/cstring"
-	"easylog/internal/converter/json"
-	"easylog/internal/converter/kvs"
 	"easylog/internal/filter"
+	"easylog/internal/kvs"
+	"easylog/internal/writer"
+	"easylog/internal/writer/cstring"
+	"easylog/internal/writer/json"
 	"fmt"
 	"os"
 
@@ -25,13 +25,16 @@ var fileCmd = &cobra.Command{
 		check(err)
 		filterpath, err := cmd.Flags().GetString("filterpath")
 		check(err)
+		themepath, err := cmd.Flags().GetString("themepath")
+		check(err)
 
-		var convert func(common.KVS) string
+		var writer writer.IWriter
 		switch format {
 		case "json":
-			convert = json.Convert
+			writer = json.New("")
 		case "string":
-			convert = cstring.Convert
+			writer, err = cstring.New(themepath)
+			check(err)
 		default:
 			return fmt.Errorf("format %s not supported", format)
 		}
@@ -46,7 +49,7 @@ var fileCmd = &cobra.Command{
 				check(err)
 			}
 		}()
-		readFile(filename, convert, f)
+		readFile(filename, writer, f)
 		return nil
 	},
 }
@@ -55,10 +58,11 @@ func init() {
 	fileCmd.PersistentFlags().String("filename", "/var/log/containers/nxw-sv__avo.log", "filename path")
 	fileCmd.PersistentFlags().String("format", "json", "format line json, string")
 	fileCmd.PersistentFlags().String("filterpath", "", "filter file path")
+	fileCmd.PersistentFlags().String("themepath", "", "theme file path")
 
 	rootCmd.AddCommand(fileCmd)
 }
-func readFile(filename string, writer func(common.KVS) string, filter *filter.Filter) (string, error) {
+func readFile(filename string, writer writer.IWriter, filter *filter.Filter) (string, error) {
 	//Read file
 	f, err := os.Open(filename)
 	if err != nil {
@@ -70,7 +74,7 @@ func readFile(filename string, writer func(common.KVS) string, filter *filter.Fi
 	for scanner.Scan() {
 		kvs := kvs.ToKVS(scanner.Text(), filter)
 		if len(kvs) > 0 {
-			fmt.Println(writer(kvs))
+			fmt.Println(writer.Write(kvs))
 		}
 	}
 

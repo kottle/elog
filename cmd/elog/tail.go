@@ -1,10 +1,10 @@
 package main
 
 import (
-	"easylog/internal/common"
-	"easylog/internal/converter/cstring"
-	"easylog/internal/converter/json"
-	"easylog/internal/converter/kvs"
+	"easylog/internal/kvs"
+	"easylog/internal/writer"
+	"easylog/internal/writer/cstring"
+	"easylog/internal/writer/json"
 	"fmt"
 	"io"
 
@@ -28,16 +28,17 @@ var tailCmd = &cobra.Command{
 		excludes, err := cmd.Flags().GetStringSlice("excludes")
 		check(err)
 
-		var convert func(common.KVS) string
+		var writer writer.IWriter
 		switch format {
 		case "json":
-			convert = json.Convert
+			writer = json.New("")
 		case "string":
-			convert = cstring.Convert
+			writer, err = cstring.New("")
+			check(err)
 		default:
 			return fmt.Errorf("format %s not supported", format)
 		}
-		tail(filename, convert, includes, excludes)
+		tail(filename, writer, includes, excludes)
 		return nil
 	},
 }
@@ -51,7 +52,7 @@ func init() {
 	rootCmd.AddCommand(tailCmd)
 }
 
-func tail(filename string, writer func(kvs common.KVS) string, in_fields, ex_fields []string) {
+func tail(filename string, writer writer.IWriter, in_fields, ex_fields []string) {
 	logrus.Infof("tail %s", filename)
 	t, err := follower.New(filename, follower.Config{
 		Whence: io.SeekEnd,
@@ -62,7 +63,7 @@ func tail(filename string, writer func(kvs common.KVS) string, in_fields, ex_fie
 	check(err)
 
 	for line := range t.Lines() {
-		fmt.Println(writer(kvs.ToKVS(line.String(), nil)))
+		fmt.Println(writer.Write(kvs.ToKVS(line.String(), nil)))
 	}
 	logrus.Infof("tail %s done", filename)
 }

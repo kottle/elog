@@ -2,12 +2,12 @@ package main
 
 import (
 	"context"
-	"easylog/internal/common"
-	"easylog/internal/converter/cstring"
-	"easylog/internal/converter/json"
-	"easylog/internal/converter/kvs"
 	"easylog/internal/filter"
+	"easylog/internal/kvs"
 	"easylog/internal/rtail"
+	"easylog/internal/writer"
+	"easylog/internal/writer/cstring"
+	"easylog/internal/writer/json"
 	"fmt"
 
 	"github.com/sirupsen/logrus"
@@ -30,12 +30,13 @@ var remoteTailCmd = &cobra.Command{
 		check(err)
 		filterpath, err := cmd.Flags().GetString("filterpath")
 		check(err)
-		var convert func(common.KVS) string
+		var writer writer.IWriter
 		switch format {
 		case "json":
-			convert = json.Convert
+			writer = json.New("")
 		case "string":
-			convert = cstring.Convert
+			writer, err = cstring.New("")
+			check(err)
 		default:
 			return fmt.Errorf("format %s not supported", format)
 		}
@@ -59,7 +60,7 @@ var remoteTailCmd = &cobra.Command{
 			KnownHosts: "/Users/eliofrancesconi/.ssh/known_hosts",
 		}
 
-		rTail(filenames, opts, convert, f)
+		rTail(filenames, opts, writer, f)
 		return nil
 	},
 }
@@ -73,7 +74,7 @@ func init() {
 	rootCmd.AddCommand(remoteTailCmd)
 }
 
-func rTail(filenames []string, opts rtail.Options, writer func(kvs common.KVS) string, filter *filter.Filter) {
+func rTail(filenames []string, opts rtail.Options, writer writer.IWriter, filter *filter.Filter) {
 	logrus.Infof("tail %s", filenames)
 	ctx := context.Background()
 	lines := make(chan string, 4)
@@ -90,7 +91,7 @@ func rTail(filenames []string, opts rtail.Options, writer func(kvs common.KVS) s
 			if len(kvs) == 0 {
 				continue
 			}
-			fmt.Println(writer(kvs))
+			fmt.Println(writer.Write(kvs))
 		}
 	}
 }

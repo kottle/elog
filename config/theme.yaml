@@ -1,0 +1,10 @@
+styles:
+  time:
+    fg: red
+    bg: white
+  msg:
+    fb: yellow
+    bg: gray
+  issue:
+    fg: white
+    bg: green
