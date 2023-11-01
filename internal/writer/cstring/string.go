@@ -3,6 +3,7 @@ package cstring
 import (
 	"easylog/internal/color"
 	"easylog/internal/common"
+	"fmt"
 	"os"
 	"sync"
 
@@ -30,14 +31,14 @@ func New(filepath string) (*Writer, error) {
 	w := &Writer{
 		filepath: filepath,
 	}
-	err := w.init()
-	return w, err
+	//err := w.init()
+	return w, nil
 }
 
 func (w *Writer) init() error {
 	err := w.updateFile()
 	if err != nil {
-		return err
+		return fmt.Errorf("error updating theme file %s: %w", w.filepath, err)
 	}
 	w.watcher, err = fsnotify.NewWatcher()
 	if err != nil {

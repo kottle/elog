@@ -25,7 +25,8 @@
             "args": [
                 "remote-tail", 
                 "--format", "string",
-                "--filterpath","./filter/filter.yaml",
+                "--server", "192.168.32.9",
+                "--filterpath","./filter/filter_av.yaml",
             ],
             "program": "${workspaceFolder}/cmd/elog",
             "cwd": "${workspaceFolder}"

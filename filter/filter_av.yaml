@@ -1,34 +1,24 @@
 field:
   if:
-    - msg
-    - level
-    - file
-    - class
+    - func
     - time
-  notIf:
+    - msg
+    - class
 line:
   notIf:
-    file:
-      - AVCFG
-    class: 
-      - Queue
-      - ConnectionService
-      - ArylicClient
-      - ArylicDriver
-      - Arylic
-      - uPNPClient
-      - BroadcastChannel
-      - AVTransport
-      - protocolserver
-      - GADBClient
-      - ATV2.Queue
-#    level: debug
-  if:
-    class:
-      - Arylic
-      - Engine
   notMatch:
+    class:
+      - "ATV.*"
+      - "GADB.*"
+      - "OSR"
+      - "Queue"
+      - "grpc.*"
     msg:
-      - ".*Driver.*onnected.*" 
-      - ".* UPnP client.*"
+      - ".*ATV.*"
+      - ".*check.*"
+
+  if:
+  match:
+#    "msg":
+#      - ".*Service.*"
 
