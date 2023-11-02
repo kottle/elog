@@ -7,18 +7,19 @@ field:
 line:
   notIf:
   notMatch:
-    class:
-      - "ATV.*"
-      - "GADB.*"
-      - "OSR"
-      - "Queue"
-      - "grpc.*"
-    msg:
-      - ".*ATV.*"
-      - ".*check.*"
-
+    # class:
+    #   - "ATV.*"
+    #   - "GADB.*"
+    #   - "OSR"
+    #   - "Queue"
+    #   - "grpc.*"
   if:
   match:
-#    "msg":
-#      - ".*Service.*"
+    # "msg":
+    #   - ".*STEP.*"
+    #
+    
+    
+    "class":
+    #   - "Engine"
 
